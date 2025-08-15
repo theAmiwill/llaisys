@@ -54,6 +54,8 @@ target("llaisys-core")
     add_deps("llaisys-utils")
     add_deps("llaisys-device")
 
+    add_includedirs("include", {public = true})
+
     set_languages("cxx17")
     set_warnings("all", "error")
     if not is_plat("windows") then
