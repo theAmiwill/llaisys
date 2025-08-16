@@ -3,6 +3,8 @@
 #include "../../../utils.hpp"
 
 #include <cmath>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void linear_(T *out, const T *in, const T *weight, const T *bias,

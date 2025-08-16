@@ -4,6 +4,8 @@
 
 #include <cmath>
 #include <limits>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void argmax_(int64_t *max_idx, T *max_val, const T *vals, size_t numel) {

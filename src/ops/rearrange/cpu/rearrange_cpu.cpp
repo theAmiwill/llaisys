@@ -4,6 +4,8 @@
 
 #include <cstring>
 #include <vector>
+#include <cstddef>
+#include <type_traits>
 
 namespace llaisys::ops::cpu {
 

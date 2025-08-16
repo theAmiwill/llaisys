@@ -3,6 +3,8 @@
 #include "../../../utils.hpp"
 
 #include <cmath>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void rope_(T *out, const T *in, const int64_t *pos_ids, 

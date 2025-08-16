@@ -3,6 +3,8 @@
 #include "../../../utils.hpp"
 
 #include <cmath>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void add_(T *c, const T *a, const T *b, size_t numel) {

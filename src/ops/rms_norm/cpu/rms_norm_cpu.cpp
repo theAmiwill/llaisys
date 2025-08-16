@@ -3,6 +3,8 @@
 #include "../../../utils.hpp"
 
 #include <cmath>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void rms_norm_(T *out, const T *in, const T *weight, size_t batch_size, size_t hidden_size, float eps) {

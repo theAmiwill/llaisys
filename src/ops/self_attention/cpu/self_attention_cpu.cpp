@@ -5,6 +5,9 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
+#include <vector>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void self_attention_(T *attn_val, const T *q, const T *k, const T *v,

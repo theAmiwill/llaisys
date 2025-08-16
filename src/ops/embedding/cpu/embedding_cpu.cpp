@@ -3,6 +3,8 @@
 #include "../../../utils.hpp"
 
 #include <cstring>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void embedding_(T *out, const int64_t *index, const T *weight, size_t batch_size, size_t embed_dim) {

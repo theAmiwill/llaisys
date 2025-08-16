@@ -3,6 +3,8 @@
 #include "../../../utils.hpp"
 
 #include <cmath>
+#include <cstddef>
+#include <type_traits>
 
 template <typename T>
 void swiglu_(T *out, const T *gate, const T *up, size_t numel) {
