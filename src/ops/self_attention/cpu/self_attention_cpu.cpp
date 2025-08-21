@@ -24,17 +24,10 @@ void self_attention_(T *attn_val, const T *q, const T *k, const T *v,
         for (size_t h = 0; h < n_heads; h++) {
             size_t kv_head = h / head_group_size;
             
-            // Compute attention scores for this query position and head
+            // Step 1: Compute attention scores A = Q * K^T * scale
             std::vector<float> scores(kv_len);
-            float max_score = -std::numeric_limits<float>::infinity();
             
             for (size_t k_pos = 0; k_pos < kv_len; k_pos++) {
-                // Only attend to positions <= current position (causal mask)
-                if (k_pos > q_pos) {
-                    scores[k_pos] = -std::numeric_limits<float>::infinity();
-                    continue;
-                }
-                
                 float score = 0.0f;
                 for (size_t d = 0; d < head_dim; d++) {
                     size_t q_idx = q_pos * n_heads * head_dim + h * head_dim + d;
@@ -50,15 +43,35 @@ void self_attention_(T *attn_val, const T *q, const T *k, const T *v,
                     }
                     score += q_val * k_val;
                 }
-                score *= scale;
-                scores[k_pos] = score;
-                max_score = std::max(max_score, score);
+                scores[k_pos] = score * scale;
             }
             
-            // Compute softmax
+            // Step 2: Apply causal mask and compute softmax
+            // For causal attention with KV cache: position i can attend to positions 0 to min(i + (kv_len - seq_len), kv_len - 1)
+            size_t max_attend_pos = q_pos + (kv_len - seq_len);
+            if (max_attend_pos >= kv_len) {
+                max_attend_pos = kv_len - 1;
+            }
+            
+            // Apply causal mask by setting invalid positions to -inf
+            for (size_t k_pos = 0; k_pos < kv_len; k_pos++) {
+                if (k_pos > max_attend_pos) {
+                    scores[k_pos] = -std::numeric_limits<float>::infinity();
+                }
+            }
+            
+            // Find max for numerical stability
+            float max_score = -std::numeric_limits<float>::infinity();
+            for (size_t k_pos = 0; k_pos < kv_len; k_pos++) {
+                if (scores[k_pos] != -std::numeric_limits<float>::infinity()) {
+                    max_score = std::max(max_score, scores[k_pos]);
+                }
+            }
+            
+            // Compute exp and sum
             float sum_exp = 0.0f;
             for (size_t k_pos = 0; k_pos < kv_len; k_pos++) {
-                if (k_pos <= q_pos) {
+                if (scores[k_pos] != -std::numeric_limits<float>::infinity()) {
                     scores[k_pos] = std::exp(scores[k_pos] - max_score);
                     sum_exp += scores[k_pos];
                 } else {
@@ -67,26 +80,24 @@ void self_attention_(T *attn_val, const T *q, const T *k, const T *v,
             }
             
             // Normalize
-            for (size_t k_pos = 0; k_pos < kv_len; k_pos++) {
-                if (sum_exp > 0.0f) {
+            if (sum_exp > 0.0f) {
+                for (size_t k_pos = 0; k_pos < kv_len; k_pos++) {
                     scores[k_pos] /= sum_exp;
                 }
             }
             
-            // Compute weighted sum of values
+            // Step 3: Compute weighted sum of values Y = softmax(A) * V
             for (size_t d = 0; d < head_dim; d++) {
                 float result = 0.0f;
                 for (size_t k_pos = 0; k_pos < kv_len; k_pos++) {
-                    if (k_pos <= q_pos) {
-                        size_t v_idx = k_pos * n_kv_heads * head_dim + kv_head * head_dim + d;
-                        float v_val;
-                        if constexpr (std::is_same_v<T, llaisys::bf16_t> || std::is_same_v<T, llaisys::fp16_t>) {
-                            v_val = llaisys::utils::cast<float>(v[v_idx]);
-                        } else {
-                            v_val = v[v_idx];
-                        }
-                        result += scores[k_pos] * v_val;
+                    size_t v_idx = k_pos * n_kv_heads * head_dim + kv_head * head_dim + d;
+                    float v_val;
+                    if constexpr (std::is_same_v<T, llaisys::bf16_t> || std::is_same_v<T, llaisys::fp16_t>) {
+                        v_val = llaisys::utils::cast<float>(v[v_idx]);
+                    } else {
+                        v_val = v[v_idx];
                     }
+                    result += scores[k_pos] * v_val;
                 }
                 
                 size_t out_idx = q_pos * n_heads * head_dim + h * head_dim + d;
